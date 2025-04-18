@@ -1,0 +1,9 @@
+CREATE DATABASE IF NOT EXISTS images;
+
+USE images;
+
+CREATE TABLE IF NOT EXISTS images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    Description TEXT,
+    Image LONGBLOB
+);
