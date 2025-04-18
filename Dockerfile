@@ -1,14 +1,12 @@
-# Use minimal base image
 FROM alpine:latest
-
 
 WORKDIR /app
 
-# Copy the executable
-COPY myapp .
+COPY myapp /app/myapp
 
-RUN chmod +x myapp
+RUN chmod +x /app/myapp
 
 ARG MYSQL_PASSW
-# Set default command
-ENTRYPOINT ["./myapp"]
+
+ENTRYPOINT ["/app/myapp"]
+
