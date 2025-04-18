@@ -1,3 +1,4 @@
 *.exe
 database/
 .env
+docker-compose.yaml

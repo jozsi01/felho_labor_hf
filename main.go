@@ -2,14 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"embed"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-
-	"encoding/base64"
-	"encoding/json"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -115,6 +115,7 @@ func initDB() *sql.DB {
 }
 
 var db *sql.DB
+var staticFiles embed.FS
 
 func main() {
 	db = initDB()
@@ -123,9 +124,8 @@ func main() {
 		log.Fatal(pingErr)
 	}
 	fmt.Println("Connected!")
-
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/", fs)
+	fs := http.FS(staticFiles)
+	http.Handle("/", http.FileServer(fs))
 	http.HandleFunc("/addImage", addImage)
 	http.HandleFunc("/getImages", getImages)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
