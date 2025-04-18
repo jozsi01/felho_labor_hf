@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Photo Uploader</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 200px;
+      background: #f0f0f0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .main {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .photo-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .photo-card img {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    }
+
+    .upload-btn {
+      display: block;
+      margin-bottom: 10px;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    #uploadForm {
+      display: none;
+      margin-top: 20px;
+    }
+
+    #uploadForm input,
+    #uploadForm textarea,
+    #uploadForm button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+    }
+
+    #preview {
+      max-width: 100%;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <button class="upload-btn" onclick="showForm()">Add Photo</button>
+    <form id="uploadForm" onsubmit="submitPhoto(event)">
+      <input type="file" id="imageInput" accept="image/*" required />
+      <textarea id="descriptionInput" rows="3" placeholder="Enter a description..." required></textarea>
+      <button type="submit">Upload</button>
+    </form>
+  </div>
+
+  <div class="main" id="photoList">
+    <!-- Uploaded photos will appear here -->
+  </div>
+
+  <script>
+    function showForm() {
+      document.getElementById('uploadForm').style.display = 'block';
+    }
+
+    function submitPhoto(event) {
+      event.preventDefault();
+
+      const fileInput = document.getElementById('imageInput');
+      const description = document.getElementById('descriptionInput').value;
+
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        addPhotoToList(e.target.result, description);
+        document.getElementById('uploadForm').reset();
+        document.getElementById('uploadForm').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function addPhotoToList(imageSrc, description) {
+      const container = document.getElementById('photoList');
+
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+
+      const img = document.createElement('img');
+      img.src = imageSrc;
+
+      const desc = document.createElement('p');
+      desc.textContent = description;
+
+      card.appendChild(img);
+      card.appendChild(desc);
+      container.prepend(card);
+    }
+  </script>
+
+</body>
+</html>
