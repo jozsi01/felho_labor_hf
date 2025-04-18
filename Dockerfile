@@ -2,7 +2,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-COPY myapp /app/myapp
+COPY myapp/detection_program /app/myapp
 
 RUN chmod +x /app/myapp
 
