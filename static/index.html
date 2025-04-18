@@ -12,7 +12,7 @@
     }
 
     .sidebar {
-      width: 200px;
+      width: 150px;
       background: #f0f0f0;
       padding: 20px;
       box-sizing: border-box;
@@ -32,9 +32,11 @@
     }
 
     .photo-card img {
-    width: 200px;
-    height: 200px;
-    object-fit: cover;
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+      margin-bottom: 5px;
     }
 
     .upload-btn {
@@ -57,11 +59,6 @@
       margin-bottom: 10px;
       box-sizing: border-box;
     }
-
-    #preview {
-      max-width: 100%;
-      margin-bottom: 10px;
-    }
   </style>
 </head>
 <body>
@@ -76,7 +73,7 @@
   </div>
 
   <div class="main" id="photoList">
-    <!-- Uploaded photos will appear here -->
+    <!-- Images will appear here -->
   </div>
 
   <script>
@@ -84,40 +81,68 @@
       document.getElementById('uploadForm').style.display = 'block';
     }
 
-    function submitPhoto(event) {
+    async function submitPhoto(event) {
       event.preventDefault();
 
       const fileInput = document.getElementById('imageInput');
       const description = document.getElementById('descriptionInput').value;
-
       const file = fileInput.files[0];
-      if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        addPhotoToList(e.target.result, description);
+      if (!file || !description) return;
+
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('description', description);
+
+      try {
+        const response = await fetch('http://localhost:8080/addImage', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
         document.getElementById('uploadForm').reset();
         document.getElementById('uploadForm').style.display = 'none';
-      };
-      reader.readAsDataURL(file);
+        await fetchAndDisplayImages();
+
+      } catch (error) {
+        alert('Error uploading image: ' + error.message);
+      }
     }
 
-    function addPhotoToList(imageSrc, description) {
+    async function fetchAndDisplayImages() {
+    try {
+      const response = await fetch('http://localhost:8080/getImages');
+      const images = await response.json();
+
       const container = document.getElementById('photoList');
+      container.innerHTML = ''; // Clear existing
 
-      const card = document.createElement('div');
-      card.className = 'photo-card';
+      images.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'photo-card';
 
-      const img = document.createElement('img');
-      img.src = imageSrc;
+        const img = document.createElement('img');
+        img.src = `data:${item.contentType};base64,${item.imageData}`;
 
-      const desc = document.createElement('p');
-      desc.textContent = description;
+        const desc = document.createElement('p');
+        desc.textContent = item.description;
 
-      card.appendChild(img);
-      card.appendChild(desc);
-      container.prepend(card);
+        card.appendChild(img);
+        card.appendChild(desc);
+        container.appendChild(card);
+      });
+    } catch (error) {
+      console.error('Failed to fetch images:', error);
     }
+  }
+
+
+    // Load existing images on page load
+    window.onload = fetchAndDisplayImages;
   </script>
 
 </body>
