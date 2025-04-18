@@ -11,4 +11,4 @@ RUN chmod +x myapp
 
 ARG MYSQL_PASSW
 # Set default command
-ENTRYPOINT ["myapp"]
+ENTRYPOINT ["./myapp"]
