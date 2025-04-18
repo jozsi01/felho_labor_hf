@@ -102,7 +102,7 @@ func initDB() *sql.DB {
 	cfg.User = "root"
 	cfg.Passwd = os.Getenv("MYSQL_PASSW")
 	cfg.Net = "tcp"
-	cfg.Addr = "127.0.0.1:8081"
+	cfg.Addr = os.Getenv("DATABASE_ADDR") + ":" + os.Getenv("DATABASE_PORT")
 	cfg.DBName = "images"
 	var err error
 	var db *sql.DB

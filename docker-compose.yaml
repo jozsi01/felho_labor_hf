@@ -1,0 +1,26 @@
+version: '3.1'
+
+services:
+  db: 
+    image: mysql
+    environment: 
+      MYSQL_ROOT_PASSWORD: secret-pw
+      MYSQL_DATABASE: images
+    volumes:
+      - "my-db:/var/lib/mysql"
+      - "./database/init-script.sql:/docker-entrypoint-initdb.d/init.sql"
+  webapp:
+    image: jozsi01/myapp:latest
+    depends_on:
+      - db
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      MYSQL_PASSW: secret-pw
+      DATABASE_ADDR: db
+      DATABASE_PORT: 3306
+volumes:
+  my-db:
+
+
