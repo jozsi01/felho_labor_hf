@@ -1,8 +1,8 @@
-FROM alpine:latest
-
-WORKDIR /app
+FROM ubuntu:latest
 
 COPY myapp/detection_program /app/myapp
+
+RUN echo "Listing contents of /app:" && ls -l /app
 
 RUN chmod +x /app/myapp
 
