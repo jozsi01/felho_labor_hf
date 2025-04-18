@@ -6,11 +6,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"encoding/base64"
 	"encoding/json"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 // Struct to return to the client
@@ -92,9 +94,13 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func initDB() *sql.DB {
+	if err := godotenv.Load(); err != nil {
+		log.Println("Error during reading env variables: ", err)
+	}
+
 	cfg := mysql.NewConfig()
 	cfg.User = "root"
-	cfg.Passwd = "secret-pw"
+	cfg.Passwd = os.Getenv("MYSQL_PASSW")
 	cfg.Net = "tcp"
 	cfg.Addr = "127.0.0.1:8081"
 	cfg.DBName = "images"
