@@ -134,10 +134,14 @@
         img.src = `data:${item.contentType};base64,${item.imageData}`;
 
         const desc = document.createElement('p');
-        desc.textContent = item.description;
+        desc.textContent = "Descripton: "+ item.description;
+
+        const personFound = document.createElement('p')
+        personFound.textContent = "Person found: "+item.personFound
 
         card.appendChild(img);
         card.appendChild(desc);
+        card.appendChild(personFound)
         container.appendChild(card);
       });
     } catch (error) {
