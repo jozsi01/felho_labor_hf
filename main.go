@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -115,16 +116,23 @@ func initDB() *sql.DB {
 }
 
 var db *sql.DB
+
+//go:embed static/index.html
 var staticFiles embed.FS
 
 func main() {
 	db = initDB()
 	pingErr := db.Ping()
+
 	if pingErr != nil {
 		log.Fatal(pingErr)
 	}
 	fmt.Println("Connected!")
-	fs := http.FS(staticFiles)
+	content, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		log.Println("There was a problem with the strip of the static directory: ", err)
+	}
+	fs := http.FS(content)
 	http.Handle("/", http.FileServer(fs))
 	http.HandleFunc("/addImage", addImage)
 	http.HandleFunc("/getImages", getImages)
