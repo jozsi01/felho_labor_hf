@@ -30,7 +30,7 @@ type DetectionServiceResponse struct {
 }
 
 func getImages(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT Description Personfound Image FROM Images")
+	rows, err := db.Query("SELECT * FROM Images")
 	if err != nil {
 		http.Error(w, "Error querying database", http.StatusInternalServerError)
 		log.Println("Error getting the rows:", err)
