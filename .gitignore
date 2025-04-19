@@ -2,3 +2,5 @@
 database/
 .env
 docker-compose.yaml
+object-detection-app/*.pt
+object-detection-app/*.jpg
