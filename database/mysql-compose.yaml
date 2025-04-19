@@ -9,9 +9,9 @@ services:
       MYSQL_ROOT_PASSWORD: secret-pw
       MYSQL_DATABASE: images
     volumes:
-      - "my-db:/var/lib/mysql"
+      - "justtest-db:/var/lib/mysql"
       - "./init-script.sql:/docker-entrypoint-initdb.d/init.sql"
 volumes:
-  my-db:
+  justtest-db:
 
 
