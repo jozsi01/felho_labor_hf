@@ -9,5 +9,6 @@ RUN chmod +x /app/myapp
 ARG MYSQL_PASSW
 ARG DATABASE_ADDR
 ARG DATABASE_PORT
+
 ENTRYPOINT ["/app/myapp"]
 

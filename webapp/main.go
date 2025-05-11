@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"encoding/base64"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Struct to return to the client
@@ -28,6 +30,13 @@ type DetectionServiceResponse struct {
 	PersonFound   int    `json:"personFound"`
 	DetectedImage string `json:"image"`
 }
+
+type QueueMessage struct {
+	PersonFound int    `json:"personFound"`
+	Description string `json:"description"`
+}
+
+var EXCHANGE_NAME = "IMAGE_MESSAGESV2"
 
 func getImages(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query("SELECT Description, Personfound, Image FROM Images")
@@ -124,7 +133,11 @@ func addImage(w http.ResponseWriter, r *http.Request) {
 		log.Println("Error inserting image:", err)
 		return
 	}
-
+	var message = QueueMessage{
+		PersonFound: imageData.PersonFound,
+		Description: description,
+	}
+	sendMessageToQueue(message)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(fmt.Sprintf("Image uploaded successfully. Persons detected: %d", imageData.PersonFound)))
 }
@@ -149,6 +162,127 @@ func initDB() *sql.DB {
 	return db
 
 }
+func sendMessageToQueue(message QueueMessage) {
+	rabbitmq := os.Getenv("RABBITMQ_ADDR")
+	conn, err := amqp.Dial("amqp://guest:guest@" + rabbitmq + ":5672/")
+	if err != nil {
+		log.Println("Error during connecting to rabbitMQ: ", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Println("Error during creating a channel: ", err)
+	}
+
+	err = ch.ExchangeDeclare(
+		EXCHANGE_NAME, // name
+		"fanout",      // type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // no-wait
+		nil,           // arguments
+	)
+	if err != nil {
+		log.Println("There was an error during decalring exchange: ", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	codedMessage, err := json.Marshal(message)
+	if err != nil {
+		log.Println("There was an error with the marshaling of the message: ", err)
+	}
+	err = ch.PublishWithContext(ctx,
+		EXCHANGE_NAME, // exchange
+		"",            // routing key
+		false,         // mandatory
+		false,         // immediate
+		amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         codedMessage,
+		})
+	log.Printf("message sent: %+v", message)
+}
+func messagesStream(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "Username required", http.StatusBadRequest)
+		return
+	}
+
+	rabbitmq := os.Getenv("RABBITMQ_ADDR")
+	conn, err := amqp.Dial("amqp://guest:guest@" + rabbitmq + ":5672/")
+	if err != nil {
+		log.Println("RabbitMQ connection error:", err)
+		http.Error(w, "Failed to connect to RabbitMQ", http.StatusInternalServerError)
+		return
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Println("RabbitMQ channel error:", err)
+		http.Error(w, "Failed to create channel", http.StatusInternalServerError)
+		return
+	}
+
+	err = ch.ExchangeDeclare(EXCHANGE_NAME, "fanout", true, false, false, false, nil)
+	if err != nil {
+		log.Println("Exchange declare error:", err)
+	}
+
+	q, err := ch.QueueDeclare(username, true, false, false, false, nil)
+	if err != nil {
+		log.Println("Queue declare error:", err)
+	}
+
+	err = ch.QueueBind(q.Name, "", EXCHANGE_NAME, false, nil)
+	if err != nil {
+		log.Println("Queue bind error:", err)
+	}
+
+	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
+	if err != nil {
+		log.Println("Queue consume error:", err)
+		http.Error(w, "Failed to consume", http.StatusInternalServerError)
+		return
+	}
+
+	// SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	ctx := r.Context()
+
+	log.Println("Started streaming for user:", username)
+
+	for {
+		select {
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Println("RabbitMQ channel closed")
+				return
+			}
+			_, err := fmt.Fprintf(w, "data: %s\n\n", msg.Body)
+			if err != nil {
+				log.Println("Write error:", err)
+				return
+			}
+			flusher.Flush()
+		case <-ctx.Done():
+			log.Println("Client disconnected:", username)
+			ch.Close()
+			conn.Close()
+			return
+		}
+	}
+}
 
 var db *sql.DB
 
@@ -163,14 +297,20 @@ func main() {
 		log.Fatal(pingErr)
 	}
 	fmt.Println("Connected!")
-	content, err := fs.Sub(staticFiles, "static")
-	if err != nil {
-		log.Println("There was a problem with the strip of the static directory: ", err)
+	if os.Getenv("MODE") == "Production" {
+		content, err := fs.Sub(staticFiles, "static")
+		if err != nil {
+			log.Println("There was a problem with the strip of the static directory: ", err)
+		}
+		fs := http.FS(content)
+		http.Handle("/", http.FileServer(fs))
+	} else {
+		http.Handle("/", http.FileServer(http.Dir("./static")))
 	}
-	fs := http.FS(content)
-	http.Handle("/", http.FileServer(fs))
+
 	http.HandleFunc("/addImage", addImage)
 	http.HandleFunc("/getImages", getImages)
+	http.HandleFunc("/messages", messagesStream)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		fmt.Println("Server error:", err)
 	}

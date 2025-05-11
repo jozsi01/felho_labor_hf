@@ -17,7 +17,7 @@
     }
 
     .sidebar {
-      width: 150px;
+      width: 200px;
       background: #f0f0f0;
       padding: 20px;
       box-sizing: border-box;
@@ -43,6 +43,13 @@
       display: block;
       margin-bottom: 5px;
     }
+    .sidebar input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      padding: 10px;
+    }
+
 
     .upload-btn {
       display: block;
@@ -75,6 +82,9 @@
       <textarea id="descriptionInput" rows="3" placeholder="Enter a description..." required></textarea>
       <button type="submit">Upload</button>
     </form>
+    <input type="text" id="usernameInput" placeholder="Enter your name" required />
+    <button class="upload-btn" onclick="subscribe()">Login & Subscribe</button>
+
   </div>
 
   <div class="main" id="photoList">
@@ -82,9 +92,30 @@
   </div>
 
   <script>
+    
     function showForm() {
       document.getElementById('uploadForm').style.display = 'block';
     }
+    async function subscribe() {
+  const username = document.getElementById('usernameInput').value;
+  if (!username) {
+    alert('Please enter a username before subscribing.');
+    return;
+  }
+
+  const eventSource = new EventSource(`http://localhost:8080/messages?username=${username}`);
+  eventSource.onmessage = function(event) {
+    console.log("New message:", event.data);
+  };
+
+  eventSource.onerror = function(err) {
+    console.error("EventSource failed:", err);
+    eventSource.close();
+  };
+
+  alert('Subscribed successfully!');
+}
+
 
     async function submitPhoto(event) {
       event.preventDefault();
