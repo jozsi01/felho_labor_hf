@@ -18,6 +18,24 @@ This project is a small cloud-based application built from three cooperating com
 - Handles small tasks such as forwarding data or hosting simple logic (e.g., Tic Tac Toe logic from the lab task).
 - Written in Go using the standard `net/http` library.
 
+### 4. CI/CD Workflow
+
+This project includes a GitHub Actions workflow that automates testing, building, and deploying the application. The workflow runs on every push and consists of three stages:
+
+1. **Unit Testing**  
+   - Checks out the code and sets up Go.  
+   - Runs all Go tests inside the `webapp` directory.
+
+2. **Build Stage**  
+   - Builds the Go application into an executable (`detection_program`).  
+   - Uploads the compiled binary as an artifact.
+
+3. **Docker Build & Push**  
+   - Downloads the built executable.  
+   - Logs in to Docker Hub using repository secrets.  
+   - Builds a Docker image using the executable and required build arguments.  
+   - Pushes the image to the user's Docker Hub repository.
+
 ### Cloud / Deployment
 - Each component runs as its own service.
 - Docker is used to containerize and run them together.
